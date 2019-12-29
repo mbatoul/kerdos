@@ -11,11 +11,6 @@ def create_app(test_config=None):
     DATABASE=os.path.join(app.instance_path, 'app.sqlite'),
   )
 
-  if __name__ != '__main__':
-    gunicorn_logger = logging.getLogger('gunicorn.error')
-    app.logger.handlers = gunicorn_logger.handlers
-    app.logger.setLevel(gunicorn_logger.level)
-
   if test_config is None:
     # load the instance config, if it exists, when not testing
     app.config.from_pyfile('config.py', silent=True)

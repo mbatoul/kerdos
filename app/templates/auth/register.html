@@ -1,11 +1,15 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<form method="post">
-	<label for="email">Email</label>
-	<input name="email" id="email" required>
-	<label for="password">Password</label>
-	<input type="password" name="password" id="password" required>
-	<input type="submit" value="Register">
-</form>
+  <form method="post">
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input class='form-control' name="email" id="email" required>
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input class='form-control' type="password" name="password" id="password" required>
+    </div>
+    <input class='btn btn-warning' type="submit" value="Register">
+  </form>
 {% endblock %}
