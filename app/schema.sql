@@ -5,3 +5,5 @@ CREATE TABLE user (
   email TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL
 );
+
+
