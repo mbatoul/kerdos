@@ -72,6 +72,7 @@ def retrieve(symbol):
       # Format date to datetime
       df = df.rename({'index': 'date'}, axis='columns')
       df['date'] = pd.to_datetime(df['date'])
+      df['date'] = df['date'].dt.strftime('%Y-%m-%d')
 
       # # Add symbol column
       df.insert(loc=0, column='symbol', value=symbol)
@@ -86,6 +87,7 @@ def retrieve(symbol):
 # Uploads data to BigQuery table.
 def upload(dataframe, dataset_id, table_id):
   if dataframe.empty:
+    print('No data to upload.')
     return
 
   res = None
@@ -146,5 +148,5 @@ def perform(symbols):
   print('END OF HISTORICAL DATA RETRIEVAL')
   print('{} hours to retrieve +20 years of historical data for {} NYSE stocks.'.format(difference / 3600, len(symbols)))
 
-symbols = get_symbols()[:10]
+symbols = get_symbols()
 perform(symbols)
