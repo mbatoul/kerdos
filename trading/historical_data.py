@@ -16,6 +16,12 @@ attempts = 3
 rows = 0
 count = 0
 
+ts = TimeSeries(
+  key=os.environ.get('AV_API_KEY'),
+  output_format='pandas',
+  indexing_type='integer'
+)
+
 def increment_count(int):
   global count
   count += int
@@ -62,19 +68,13 @@ def get_symbols(market):
   return symbols_clean
 
 # Retrieves +20 years for historical quotes for a single stock.
-def retrieve_from_av(symbol):
+def retrieve_hist_from_av(symbol):
   print('Start retrieving historical time series...')
 
   df = pd.DataFrame(columns=[''])
 
   for attempt in range(attempts):
     try:
-      ts = TimeSeries(
-        key=os.environ.get('AV_API_KEY'),
-        output_format='pandas',
-        indexing_type='integer'
-      )
-
       df, metadata = ts.get_daily(
         symbol=symbol,
         outputsize='full'
@@ -156,7 +156,7 @@ def perform(market, instrument_type):
     for symbol in chunk_of_symbols:
       print('------------------- Stock: {} -------------------'.format(symbol))
 
-      df = retrieve_from_av(symbol)
+      df = retrieve_hist_from_av(symbol)
       if not df.empty:
         if df_to_load.empty:
           df_to_load = df
