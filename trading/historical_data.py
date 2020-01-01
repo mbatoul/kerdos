@@ -5,51 +5,146 @@ import numpy as np
 import pandas as pd
 import string
 import time
+from datetime import datetime
 from alpha_vantage.timeseries import TimeSeries
 from google.cloud import bigquery
+from bs4 import BeautifulSoup
 
 load_dotenv()
 
-alpha_vantage_api_key = os.environ.get('ALPHAVANTAGE_API_KEY')
+attempts = 3
 
-# Loop over selected symbols
-symbol = 'MC.PA'
+# Retrieves all ticker symbols of NYSE stocks.
+def get_symbols():
+  alphabet = list(string.ascii_uppercase)
 
-# for symbol in symbols:
-ts = TimeSeries(
-  key=alpha_vantage_api_key,
-  output_format='pandas'
-)
+  symbols = []
 
-df, metadata = ts.get_daily(
-  symbol=symbol,
-  outputsize='full'
-)
+  print('Start parsing eoddata to retrieve symbols...')
+  for each in alphabet:
+    url = 'http://eoddata.com/stocklist/NYSE/{}.htm'.format(each)
+    resp = requests.get(url)
+    site = resp.content
+    soup = BeautifulSoup(site, 'html.parser')
+    table = soup.find('table', {'class': 'quotes'})
+    for row in table.findAll('tr')[1:]:
+      symbol = row.findAll('td')[0].text.rstrip()
+      symbols.append(symbol)
+      print('Get {}...'.format(symbol))
 
-# Clean column names (remove numbers)
-for column in df.columns:
-  df = df.rename({column: column[3:]}, axis='columns')
+  symbols_clean = []
 
-# Add symbol column
-df.insert(loc=0, column='symbol', value=symbol)
+  print('Start cleaning the symbols...')
+  for each in symbols:
+    each = each.replace('.', '-')
+    symbols_clean.append((each.split('-')[0]))
 
-client = bigquery.Client()
+  print('{} NYSE ticker symbols retrieved and cleaned.'.format(str(len(symbols_clean))))
 
-dataset_id = 'equity_data'
-table_id = 'daily_quote_data'
+  return symbols_clean
 
-dataset_ref = client.dataset(dataset_id)
-table_ref = dataset_ref.table(table_id)
+# Retrieves +20 years for historical quotes for a single stock.
+def retrieve(symbol):
+  print('Start retrieving historical time series...')
 
-job_config = bigquery.LoadJobConfig()
-job_config.source_format = bigquery.SourceFormat.CSV
-job_config.autodetect = True
-job_config.ignore_unknown_values = True
-job = client.load_table_from_dataframe(
-  df,
-  table_ref,
-  location='FR',
-  job_config=job_config
-)
+  df = pd.DataFrame(columns=[''])
 
-job.result()
+  for attempt in range(attempts):
+    try:
+      ts = TimeSeries(
+        key=os.environ.get('AV_API_KEY'),
+        output_format='pandas',
+        indexing_type='integer'
+      )
+
+      df, metadata = ts.get_daily(
+        symbol=symbol,
+        outputsize='full'
+      )
+    except Exception as e:
+      print('Attempt {} to retrieve data failed. Error: {}'.format(attempt + 1, e))
+      time.sleep(60)
+    else:
+      # Clean column names (remove numbers)
+      for column in df.columns[1:]:
+        df = df.rename({column: column[3:]}, axis='columns')
+
+      # Format date to datetime
+      df = df.rename({'index': 'date'}, axis='columns')
+      df['date'] = pd.to_datetime(df['date'])
+
+      # # Add symbol column
+      df.insert(loc=0, column='symbol', value=symbol)
+
+      print('Time series retrieval succeeded!')
+      break
+  else:
+    print('All {} attempts to retrieve data failed.'.format(attempts))
+
+  return df
+
+# Uploads data to BigQuery table.
+def upload(dataframe, dataset_id, table_id):
+  if dataframe.empty:
+    return
+
+  res = None
+
+  for attempt in range(attempts):
+    try:
+      client = bigquery.Client()
+
+      dataset_ref = client.dataset(dataset_id)
+      table_ref = dataset_ref.table(table_id)
+
+      job_config = bigquery.LoadJobConfig()
+      job_config.source_format = bigquery.SourceFormat.CSV
+      job_config.autodetect = True
+      job_config.ignore_unknown_values = True
+
+      print('Start upload to BigQuery...')
+      job = client.load_table_from_dataframe(
+        dataframe,
+        table_ref,
+        location='EU',
+        job_config=job_config
+      )
+    except Exception as e:
+      print('Attempt {} to upload data for stock {} failed. Error: {}'.format(attempt + 1, dataframe['symbol'].iloc[0], e))
+      time.sleep(10)
+    else:
+      print('Upload succeeded!')
+      res = 'Upload succeeded'
+      break
+  else:
+    res = 'Upload failed'
+    print('All {} attemps to retrieve data for stock {} failed'.format(attempts, dataframe['symbol'].iloc[0]))
+
+  return res
+
+# Retrieves and uploads data for all NYSE stocks.
+def perform(symbols):
+  count = 0
+
+  start = time.time()
+  print('START OF HISTORICAL DATA RETRIEVAL')
+  for symbol in symbols:
+    print('------------------- Stock: {} -------------------'.format(symbol))
+    historical_data = retrieve(symbol)
+
+    upload(
+      historical_data,
+      'equity_data',
+      'nyse_quotes'
+    )
+
+    count += 1
+    print('Total count: {}'.format(count))
+
+  end = time.time()
+  difference = int(end - start)
+  print('END OF HISTORICAL DATA RETRIEVAL')
+  print('{} hours to retrieve +20 years of historical data for {} NYSE stocks.'.format(difference / 3600, len(symbols)))
+
+symbols = get_symbols()[:10]
+perform(symbols)
