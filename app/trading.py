@@ -25,8 +25,6 @@ def index():
   current_positions = api.list_positions()
   clock = api.get_clock()
   account = api.get_account()
-  print(account)
-  print(type(account))
   balance_change = float(account.equity) - float(account.last_equity)
 
   return render_template('trading/index.html',
