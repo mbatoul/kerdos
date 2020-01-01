@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template
+from flask import Flask, render_template, session, redirect, url_for
 
 def create_app(test_config=None):
   # App initialization
@@ -28,10 +28,19 @@ def create_app(test_config=None):
   from . import auth
   app.register_blueprint(auth.auth)
 
+  # Trading info blueprint
+  from . import trading
+  app.register_blueprint(trading.trading)
+
   # Main route
   @app.route('/')
   def home():
-    return render_template('home.html')
+    user_id = session.get('user_id')
+
+    if user_id is None:
+      return render_template('home.html')
+    else:
+      return redirect(url_for('trading.index'))
 
   return app
 

@@ -14,6 +14,13 @@ load_dotenv()
 
 attempts = 3
 
+rows = 0
+
+# Increments global variable rows.
+def add_to_rows(int):
+  global rows
+  rows += int
+
 # Retrieves all ticker symbols of NYSE stocks.
 def get_symbols():
   alphabet = list(string.ascii_uppercase)
@@ -37,9 +44,14 @@ def get_symbols():
   print('Start cleaning the symbols...')
   for each in symbols:
     each = each.replace('.', '-')
-    symbols_clean.append((each.split('-')[0]))
+    each = each.split('-')[0]
+    symbols_clean.append(each)
 
-  print('{} NYSE ticker symbols retrieved and cleaned.'.format(str(len(symbols_clean))))
+  symbols_clean = list(set(symbols_clean))
+
+  print('Clean symbols: {}'.format(symbols_clean))
+
+  print('{} NYSE ticker symbols retrieved and cleaned.'.format(len(symbols_clean)))
 
   return symbols_clean
 
@@ -63,7 +75,7 @@ def retrieve(symbol):
       )
     except Exception as e:
       print('Attempt {} to retrieve data failed. Error: {}'.format(attempt + 1, e))
-      time.sleep(60)
+      time.sleep(10)
     else:
       # Clean column names (remove numbers)
       for column in df.columns[1:]:
@@ -77,7 +89,7 @@ def retrieve(symbol):
       # # Add symbol column
       df.insert(loc=0, column='symbol', value=symbol)
 
-      print('Time series retrieval succeeded!')
+      print('Retrieval of {} time series succeeded!'.format(len(df.index)))
       break
   else:
     print('All {} attempts to retrieve data failed.'.format(attempts))
@@ -111,10 +123,12 @@ def upload(dataframe, dataset_id, table_id):
         location='EU',
         job_config=job_config
       )
+
     except Exception as e:
       print('Attempt {} to upload data for stock {} failed. Error: {}'.format(attempt + 1, dataframe['symbol'].iloc[0], e))
       time.sleep(10)
     else:
+      add_to_rows(len(dataframe.index))
       print('Upload succeeded!')
       res = 'Upload succeeded'
       break
@@ -141,6 +155,7 @@ def perform(symbols):
     )
 
     count += 1
+    print('Total rows: {}'.format(rows))
     print('Total count: {}'.format(count))
 
   end = time.time()
