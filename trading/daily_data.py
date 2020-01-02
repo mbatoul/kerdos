@@ -10,12 +10,25 @@ from alpha_vantage.timeseries import TimeSeries
 from google.cloud import bigquery
 from bs4 import BeautifulSoup
 from historical_data import get_symbols, load_to_gbq, attempts
+import alpaca_trade_api as tradeapi
 
 load_dotenv()
 
 def perform(market, instrument_type):
   today = datetime.today().strftime('%Y-%m-%d')
   print('Current day: {}'.format(today))
+
+  # Check if market is open
+  api = tradeapi.REST(
+    os.environ.get('APCA_API_KEY_ID'),
+    os.environ.get('APCA_API_SECRET_KEY'),
+    api_version='v2'
+  )
+
+  is_open = api.get_clock().is_open
+  if is_open == False:
+    print('Market is currently closed.')
+    return
 
   # Retrieve daily quotes for symbols
   ts = TimeSeries(
