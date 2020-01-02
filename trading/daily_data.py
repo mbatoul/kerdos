@@ -63,7 +63,7 @@ def perform(market, instrument_type):
       load_to_gbq(
         df_to_load,
         '{}_dataset'.format(instrument_type.lower()),
-        '{}_quotes_1'.format(market.lower())
+        '{}_quotes'.format(market.lower())
       )
     except Exception as e:
       print('Something went wrong loading data. Error: {}'.format(e))
