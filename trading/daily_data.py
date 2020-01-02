@@ -28,7 +28,7 @@ def perform(market, instrument_type):
 
   df_to_load = pd.DataFrame(columns=[''])
 
-  for symbol in symbols[:100]:
+  for symbol in symbols:
     for attempt in range(attempts):
       try:
         df_symbol, metadata = ts.get_quote_endpoint(
@@ -58,8 +58,6 @@ def perform(market, instrument_type):
   df_to_load = df_to_load[['symbol', 'date', 'open', 'high', 'low', 'close', 'volume']]
   df_to_load = df_to_load.loc[df_to_load['date'] == today]
 
-  print('Start loading dataset...')
-  print(df_to_load)
   for attempt in range(attempts):
     try:
       load_to_gbq(
