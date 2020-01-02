@@ -16,7 +16,6 @@ load_dotenv()
 def perform(market, instrument_type):
   today = datetime.today().strftime('%Y-%m-%d')
   print('Current day: {}'.format(today))
-  today = '2019-12-31'
 
   # Retrieve daily quotes for symbols
   ts = TimeSeries(
@@ -47,6 +46,7 @@ def perform(market, instrument_type):
     else:
       print('All {} attempts to retrieve data failed.'.format(attempts))
 
+  # Dataframe formating
   for column in df_to_load.columns:
     df_to_load = df_to_load.rename({column: column[4:]}, axis='columns')
 
@@ -58,21 +58,11 @@ def perform(market, instrument_type):
   df_to_load = df_to_load[['symbol', 'date', 'open', 'high', 'low', 'close', 'volume']]
   df_to_load = df_to_load.loc[df_to_load['date'] == today]
 
-  for attempt in range(attempts):
-    try:
-      load_to_gbq(
-        df_to_load,
-        '{}_dataset'.format(instrument_type.lower()),
-        '{}_quotes'.format(market.lower())
-      )
-    except Exception as e:
-      print('Something went wrong loading data. Error: {}'.format(e))
-      time.sleep(10)
-    else:
-      print('------------------------------------------')
-      print('Data loading for date {} succeeded.'.format(today))
-      print('------------------------------------------')
-      break
+  load_to_gbq(
+    df_to_load,
+    '{}_dataset'.format(instrument_type.lower()),
+    '{}_quotes'.format(market.lower())
+  )
 
 if __name__ == '__main__':
   start = time.time()
