@@ -361,7 +361,8 @@ def momentum_trading():
         )
     except Exception:
       pass
-
+  
+  print('Uploading strategy log...')
   # Log the updated pf
   positions = apca_api.list_positions()
   print('Updated positions: {}'.format(positions))
@@ -380,12 +381,8 @@ def momentum_trading():
     }
   )
 
-  # Add the current date and other info into the portfolio df for logging
   position_df['date'] = pd.to_datetime(today_fmt)
-  position_df['strat'] = 'momentum_strat_1'
-
-  # Add the new pf to BQ
-  # Format date to match schema
+  position_df['strat'] = 'momentum_strategy'
   position_df['date'] = position_df['date'].dt.date
 
   load_to_gbq(
